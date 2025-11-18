@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mobile Agent</string>
+    <string name="terminal_hint">Enter command...</string>
+    <string name="agent_mode">AI Agent Mode</string>
+    <string name="terminal_mode">Terminal Mode</string>
+    <string name="settings">Settings</string>
+    <string name="api_key_required">API Key required for AI features</string>
+    <string name="executing">Executing...</string>
+</resources>
