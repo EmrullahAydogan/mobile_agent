@@ -1,6 +1,7 @@
 package com.mobileagent.agent.models
 
 import com.google.gson.annotations.SerializedName
+import com.mobileagent.agent.tools.Tool
 
 data class ClaudeRequest(
     val model: String = "claude-sonnet-4-5-20250929",
@@ -9,12 +10,13 @@ data class ClaudeRequest(
     val maxTokens: Int = 4096,
     val temperature: Double = 1.0,
     val system: String? = null,
+    val tools: List<Tool>? = null,
     val stream: Boolean = false
 )
 
 data class Message(
     val role: String, // "user" or "assistant"
-    val content: String
+    val content: Any // Can be String or List<ContentBlock>
 )
 
 data class ClaudeResponse(
@@ -29,8 +31,27 @@ data class ClaudeResponse(
 )
 
 data class ContentBlock(
-    val type: String, // "text"
-    val text: String
+    val type: String, // "text" or "tool_use"
+    val text: String? = null,
+    val id: String? = null,
+    val name: String? = null,
+    val input: Map<String, Any>? = null
+)
+
+data class ToolUseBlock(
+    val type: String = "tool_use",
+    val id: String,
+    val name: String,
+    val input: Map<String, Any>
+)
+
+data class ToolResultBlock(
+    val type: String = "tool_result",
+    @SerializedName("tool_use_id")
+    val toolUseId: String,
+    val content: String,
+    @SerializedName("is_error")
+    val isError: Boolean = false
 )
 
 data class Usage(

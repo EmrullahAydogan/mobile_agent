@@ -1,6 +1,12 @@
 package com.mobileagent.agent
 
 import com.mobileagent.agent.models.Message
+import com.mobileagent.agent.models.ToolResultBlock
+import com.mobileagent.agent.models.ContentBlock
+import com.mobileagent.agent.tools.ToolDefinitions
+import com.mobileagent.agent.tools.ToolExecutor
+import com.mobileagent.agent.tools.ToolResult
+import com.mobileagent.runtime.RuntimeManager
 import com.mobileagent.shell.FileSystemManager
 import com.mobileagent.shell.ShellExecutor
 
@@ -8,51 +14,134 @@ class ClaudeAgent(private val apiKey: String) {
     private val repository = ClaudeRepository(apiKey)
     private val shellExecutor = ShellExecutor()
     private val fileSystemManager = FileSystemManager()
+    private val runtimeManager = RuntimeManager()
+    private val toolExecutor = ToolExecutor(shellExecutor, fileSystemManager, runtimeManager)
     private val conversationHistory = mutableListOf<Message>()
 
     private val systemPrompt = """
         You are Claude, a helpful AI assistant running on a mobile Android device as a terminal agent.
         You have access to execute shell commands and manipulate files through a terminal interface.
 
-        Key capabilities:
-        - Execute shell commands (ls, cat, mkdir, rm, cp, mv, etc.)
-        - Read and write files
-        - Navigate the file system
-        - Help users with programming and system administration tasks
+        You have the following tools available:
+        - execute_command: Run shell commands (ls, cat, mkdir, rm, cp, mv, etc.)
+        - read_file: Read file contents
+        - write_file: Create or update files
+        - list_files: List directory contents
+        - create_directory: Create new directories
+        - delete_file: Delete files or directories
+        - run_python: Execute Python code
+        - run_javascript: Execute JavaScript/Node.js code
 
         When users ask you to perform tasks:
-        1. Break down complex tasks into steps
-        2. Execute necessary commands
-        3. Explain what you're doing
-        4. Handle errors gracefully
+        1. USE THE TOOLS to actually perform the requested actions
+        2. Break down complex tasks into steps
+        3. Explain what you're doing before and after using tools
+        4. Handle errors gracefully and report them clearly
 
         Current working directory: ${ShellExecutor.getHomeDirectory().absolutePath}
 
-        Be concise and helpful. Format code blocks properly.
+        Be proactive! If a user asks you to do something, use the appropriate tools to do it.
+        Don't just suggest commands - actually execute them using the tools.
     """.trimIndent()
 
-    suspend fun chat(userMessage: String): String {
+    suspend fun chat(userMessage: String, onToolUse: ((String, String) -> Unit)? = null): String {
         conversationHistory.add(Message("user", userMessage))
 
-        return when (val result = repository.chat(userMessage, conversationHistory, systemPrompt)) {
-            is Result.Success -> {
-                val response = result.data
-                conversationHistory.add(Message("assistant", response))
-                response
-            }
-            is Result.Error -> {
-                "Error: ${result.exception.message}"
+        var continueLoop = true
+        var finalResponse = ""
+
+        while (continueLoop) {
+            when (val result = repository.sendMessageWithTools(
+                conversationHistory,
+                systemPrompt,
+                ToolDefinitions.getAllTools()
+            )) {
+                is Result.Success -> {
+                    val response = result.data
+                    val assistantContent = mutableListOf<Any>()
+
+                    // Process response content
+                    for (block in response.content) {
+                        when (block.type) {
+                            "text" -> {
+                                block.text?.let {
+                                    assistantContent.add(mapOf("type" to "text", "text" to it))
+                                    finalResponse += it
+                                }
+                            }
+                            "tool_use" -> {
+                                // Execute the tool
+                                val toolName = block.name ?: continue
+                                val toolInput = block.input ?: emptyMap()
+                                val toolUseId = block.id ?: continue
+
+                                onToolUse?.invoke(toolName, "Executing...")
+
+                                val toolResult = toolExecutor.executeTool(toolName, toolInput)
+
+                                // Add tool use to conversation
+                                assistantContent.add(mapOf(
+                                    "type" to "tool_use",
+                                    "id" to toolUseId,
+                                    "name" to toolName,
+                                    "input" to toolInput
+                                ))
+
+                                // Add tool result to conversation
+                                conversationHistory.add(Message("assistant", assistantContent.toList()))
+
+                                val resultContent = when (toolResult) {
+                                    is ToolResult.Success -> {
+                                        onToolUse?.invoke(toolName, toolResult.output)
+                                        listOf(ToolResultBlock(
+                                            toolUseId = toolUseId,
+                                            content = toolResult.output,
+                                            isError = false
+                                        ))
+                                    }
+                                    is ToolResult.Error -> {
+                                        onToolUse?.invoke(toolName, "Error: ${toolResult.message}")
+                                        listOf(ToolResultBlock(
+                                            toolUseId = toolUseId,
+                                            content = toolResult.message,
+                                            isError = true
+                                        ))
+                                    }
+                                }
+
+                                conversationHistory.add(Message("user", resultContent))
+                                assistantContent.clear()
+                            }
+                        }
+                    }
+
+                    // Check stop reason
+                    when (response.stopReason) {
+                        "end_turn" -> {
+                            if (assistantContent.isNotEmpty()) {
+                                conversationHistory.add(Message("assistant", assistantContent.toList()))
+                            }
+                            continueLoop = false
+                        }
+                        "tool_use" -> {
+                            // Continue loop to send tool results back
+                            continueLoop = true
+                        }
+                        else -> continueLoop = false
+                    }
+                }
+                is Result.Error -> {
+                    finalResponse = "Error: ${result.exception.message}"
+                    continueLoop = false
+                }
             }
         }
+
+        return finalResponse
     }
 
-    suspend fun executeAgentTask(task: String): String {
-        // Enhanced task execution with command detection
-        val response = chat(task)
-
-        // Check if response contains command suggestions
-        // Extract and execute if user confirms
-        return response
+    suspend fun executeAgentTask(task: String, onToolUse: ((String, String) -> Unit)? = null): String {
+        return chat(task, onToolUse)
     }
 
     fun clearHistory() {
@@ -61,39 +150,5 @@ class ClaudeAgent(private val apiKey: String) {
 
     fun getHistory(): List<Message> {
         return conversationHistory.toList()
-    }
-
-    // Tool execution methods that Claude can call
-    suspend fun executeTool(toolName: String, params: Map<String, String>): String {
-        return when (toolName) {
-            "execute_command" -> {
-                val command = params["command"] ?: return "No command specified"
-                val result = shellExecutor.execute(command)
-                buildString {
-                    if (result.output.isNotEmpty()) appendLine(result.output)
-                    if (result.error.isNotEmpty()) appendLine("Error: ${result.error}")
-                }
-            }
-            "read_file" -> {
-                val path = params["path"] ?: return "No path specified"
-                fileSystemManager.readFile(path) ?: "File not found or cannot be read"
-            }
-            "write_file" -> {
-                val path = params["path"] ?: return "No path specified"
-                val content = params["content"] ?: return "No content specified"
-                if (fileSystemManager.writeFile(path, content)) {
-                    "File written successfully"
-                } else {
-                    "Failed to write file"
-                }
-            }
-            "list_files" -> {
-                val path = params["path"]
-                val dir = if (path != null) java.io.File(path) else fileSystemManager.homeDirectory
-                val files = fileSystemManager.listFiles(dir)
-                files.joinToString("\n") { "${it.name} (${if (it.isDirectory) "dir" else "${it.size} bytes"})" }
-            }
-            else -> "Unknown tool: $toolName"
-        }
     }
 }

@@ -6,43 +6,144 @@ Android Native CLI Agent with AI capabilities - A Termux-like terminal emulator 
 
 Mobile Agent is a powerful Android application that combines a full-featured terminal emulator with Claude AI agent capabilities, allowing you to execute shell commands, manage files, and interact with an AI assistant directly on your Android device.
 
-## Features
+## ✨ Features
 
-### Terminal Emulator
-- Full terminal interface with command execution
+### 🖥️ Advanced Terminal Emulator
+- **Full terminal interface** with command execution
+- **Syntax highlighting** for commands, arguments, and output
+- **Command history** with up/down navigation (500+ commands)
+- **Auto-completion** for commands and file paths (Tab support)
+- **Multiple terminal sessions** (tabs support)
 - Built-in shell commands (ls, cd, cat, mkdir, rm, cp, mv, etc.)
 - File system navigation and management
 - Support for native Android shell commands
 
-### AI Agent (Claude Integration)
-- Conversational AI interface powered by Claude
+### 🤖 AI Agent (Claude Integration with Tool Calling)
+- **Conversational AI** interface powered by Claude Sonnet 4.5
+- **Automatic tool calling** - Claude can actually execute commands!
+- **8 Built-in tools**:
+  - execute_command: Run shell commands
+  - read_file / write_file: File operations
+  - list_files / create_directory / delete_file: File management
+  - run_python / run_javascript: Code execution
 - Context-aware assistance for programming tasks
-- Ability to execute commands through AI
-- Tool execution (file operations, command execution)
+- Multi-turn conversations with tool result feedback
+- Real-time tool execution display
 
-### Package Management
+### 📦 Package Management
 - Install and manage packages
 - Support for Python, Node.js, Git, Vim, curl, and more
 - Simple package installation and removal
 - Package search functionality
+- Dependency management
 
-### SSH Client
+### 🔐 SSH Client
 - Connect to remote servers via SSH
 - Execute commands on remote machines
 - File transfer (SFTP)
 - Multiple connection management
+- Key-based authentication support
 
-### Runtime Support
+### 🐍 Runtime Support & REPL
 - **Python 3**: Execute Python scripts and code
 - **Node.js**: Run JavaScript/Node.js applications
+- **Interactive REPL** for Python, JavaScript, and Bash
+- Context preservation for multi-line code
 - **npm**: Install and manage Node.js packages
 - **pip**: Install Python packages
+- Script execution with arguments
 
-### File System Management
+### 📁 File System Management
+- **Visual File Browser** with touch gestures
+- Context menus (long press)
+- Create files and folders
 - Full file system access (with permissions)
 - Read, write, copy, move operations
 - Directory creation and navigation
 - File metadata and permissions
+- Search and filter
+
+### ✏️ Code Editor
+- Integrated code editor with line numbers
+- Syntax support for multiple languages
+- Auto-save and change detection
+- Search and replace (coming soon)
+- Multiple file editing
+- Monospace font with adjustable size
+
+### 🔄 Git Integration
+- Full Git client functionality
+- View status, branches, commit history
+- Stage, commit, push, pull operations
+- Branch management (create, switch, merge)
+- Diff viewer
+- Clone repositories
+- Remote operations
+
+### 🌐 HTTP Client
+- **Postman-like HTTP client**
+- Support for GET, POST, PUT, DELETE, PATCH
+- Custom headers and body
+- Response viewing with metadata
+- Request history (last 50 requests)
+- Response time tracking
+- Multiple content types
+
+### 🐳 Docker Management
+- **Full Docker support**
+- List containers and images
+- Start, stop, restart containers
+- View logs and stats
+- Execute commands in containers
+- Build and pull images
+- Docker Compose support
+- Container inspection
+
+### 🗄️ Database Client (SQLite)
+- **SQLite database browser**
+- Execute SQL queries
+- View table structure and data
+- Insert, update, delete rows
+- Create and drop tables
+- Export to SQL file
+- Query result visualization
+- Transaction support
+
+### 📝 Script Templates
+- **10+ ready-to-use script templates**:
+  - HTTP Server (Python)
+  - Web Scraper (Python)
+  - File Organizer (Python)
+  - JSON Formatter (Python)
+  - Express Server (Node.js)
+  - API Client (Node.js)
+  - File Watcher (Node.js)
+  - System Info (Bash)
+  - Backup Script (Bash)
+  - Git Auto Commit (Bash)
+- Categories: Web, Utilities, Data, System, Git
+- Searchable template library
+
+### ⏰ Task Automation
+- **Cron-like task scheduler**
+- Schedule: Once, Daily, Weekly, Interval
+- Background execution
+- Task management (enable/disable)
+- Notification support
+
+### 🎨 Theme Customization
+- **7 built-in themes**:
+  - Dark (Default GitHub style)
+  - Dracula
+  - Monokai
+  - Nord
+  - Gruvbox Dark
+  - Light (Default)
+  - Solarized Light
+- Adjustable font size (10-24px)
+- Adjustable line height
+- Custom color schemes
+- Per-theme terminal colors
 
 ## Architecture
 

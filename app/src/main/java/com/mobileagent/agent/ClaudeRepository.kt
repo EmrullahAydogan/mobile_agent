@@ -74,6 +74,30 @@ class ClaudeRepository(private val apiKey: String) {
             is Result.Error -> Result.failure(result.exception)
         }
     }
+
+    suspend fun sendMessageWithTools(
+        messages: List<Message>,
+        systemPrompt: String? = null,
+        tools: List<com.mobileagent.agent.tools.Tool>
+    ): Result<ClaudeResponse> {
+        return try {
+            val request = ClaudeRequest(
+                messages = messages,
+                system = systemPrompt,
+                tools = tools
+            )
+
+            val response = service.sendMessage(apiKey, request)
+
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("API Error: ${response.code()} - ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
 
 sealed class Result<out T> {
